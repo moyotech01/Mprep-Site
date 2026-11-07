@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · Watchtower Comments</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Password Gate -->
+    <div id="password-gate" class="password-gate">
+      <h2>Admin Access</h2>
+      <p style="color:var(--muted); margin-top:8px;">Enter password to continue</p>
+      <input type="password" id="password-input" placeholder="Password" />
+      <button class="btn" onclick="checkPassword()">Unlock</button>
+      <p id="error-msg" style="color:var(--danger); margin-top:12px; font-size:0.9rem;" class="hidden">Wrong password</p>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-panel" class="hidden">
+      <div class="admin-header">
+        <h1>Edit Comments</h1>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="downloadJSON(data)">Download JSON</button>
+          <button class="btn" onclick="saveAndDownload()">Save & Download</button>
+        </div>
+      </div>
+
+      <div id="admin-articles"></div>
+
+      <div style="margin-top:30px; padding-top:20px; border-top:1px solid var(--border);">
+        <button class="btn btn-secondary" onclick="addNewArticle()">+ Add New Article</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // ========== CHANGE THIS PASSWORD ==========
+    const ADMIN_PASSWORD = "Moyoninuoluwa@01";
+    // ==========================================
+
+    let data = { articles: [] };
+
+    function checkPassword() {
+      const input = document.getElementById('password-input').value;
+      if (input === ADMIN_PASSWORD) {
+        document.getElementById('password-gate').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        loadAdmin();
+      } else {
+        document.getElementById('error-msg').classList.remove('hidden');
+      }
+    }
+
+    // Allow Enter key
+    document.getElementById('password-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') checkPassword();
+    });
+
+    async function loadAdmin() {
+      data = await loadComments();
+      renderAdmin();
+    }
+
+    function renderAdmin() {
+      const container = document.getElementById('admin-articles');
+      container.innerHTML = data.articles.map((article, aIndex) => `
+        <div class="para-card" style="margin-bottom:24px;">
+          <div class="form-group">
+            <label>Title</label>
+            <input value="${escapeHtml(article.title)}" onchange="data.articles[${aIndex}].title = this.value" />
+          </div>
+          <div class="form-group">
+            <label>Week</label>
+            <input value="${escapeHtml(article.week)}" onchange="data.articles[${aIndex}].week = this.value" />
+          </div>
+          <div class="form-group">
+            <label>Publication</label>
+            <input value="${escapeHtml(article.publication)}" onchange="data.articles[${aIndex}].publication = this.value" />
+          </div>
+
+          <h3 style="margin:20px 0 12px; font-size:1rem;">Paragraphs</h3>
+          ${article.paragraphs.map((p, pIndex) => `
+            <div style="background:#0d1117; border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px;">
+              <div class="form-group">
+                <label>Number</label>
+                <input value="${escapeHtml(p.number)}" onchange="data.articles[${aIndex}].paragraphs[${pIndex}].number = this.value" />
+              </div>
+              <div class="form-group">
+                <label>Question</label>
+                <textarea onchange="data.articles[${aIndex}].paragraphs[${pIndex}].question = this.value">${escapeHtml(p.question)}</textarea>
+              </div>
+              <div class="form-group">
+                <label>Your Comment</label>
+                <textarea style="min-height:120px;" onchange="data.articles[${aIndex}].paragraphs[${pIndex}].comment = this.value">${escapeHtml(p.comment)}</textarea>
+              </div>
+              <button class="btn btn-danger" style="padding:6px 12px; font-size:0.8rem;" 
+                onclick="deleteParagraph(${aIndex}, ${pIndex})">Delete paragraph</button>
+            </div>
+          `).join('')}
+
+          <button class="btn btn-secondary" style="margin-top:8px;" onclick="addParagraph(${aIndex})">+ Add Paragraph</button>
+          <button class="btn btn-danger" style="margin-top:8px; margin-left:8px;" onclick="deleteArticle(${aIndex})">Delete Article</button>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function addParagraph(aIndex) {
+      data.articles[aIndex].paragraphs.push({
+        number: "",
+        question: "",
+        comment: ""
+      });
+      renderAdmin();
+    }
+
+    function deleteParagraph(aIndex, pIndex) {
+      if (confirm('Delete this paragraph?')) {
+        data.articles[aIndex].paragraphs.splice(pIndex, 1);
+        renderAdmin();
+      }
+    }
+
+    function addNewArticle() {
+      data.articles.unshift({
+        id: 'article-' + Date.now(),
+        title: "New Article Title",
+        week: "",
+        publication: "",
+        paragraphs: [{
+          number: "1",
+          question: "",
+          comment: ""
+        }]
+      });
+      renderAdmin();
+    }
+
+    function deleteArticle(aIndex) {
+      if (confirm('Delete this entire article?')) {
+        data.articles.splice(aIndex, 1);
+        renderAdmin();
+      }
+    }
+
+    function saveAndDownload() {
+      downloadJSON(data);
+      alert('JSON downloaded!\n\nNow replace the file at data/comments.json on your hosting.');
+    }
+  </script>
+</body>
+</html>
